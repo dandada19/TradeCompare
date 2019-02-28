@@ -27,6 +27,8 @@ public class App
     {
 //    	String csvFilePath = args[0];
 //    	String logPath = args[1];
+    	
+    	//to be removed
     	String csvFilePath = "C:\\Users\\dzhu\\Desktop\\java\\akoul\\swap.csv";
     	String logPath = "C:\\Users\\dzhu\\Desktop\\java\\akoul\\green rfq logs on qa11 for hour 22.txt";
 
@@ -91,7 +93,6 @@ public class App
         	allParamsInLog.add(paramsInLog);
         	printList(paramsInLog);
     		System.out.println("size of paramsInLog = " + paramsInLog.size());
-
     	}
     	
     	String outputFilePath = csvFilePath.replace("csv", "xls");
