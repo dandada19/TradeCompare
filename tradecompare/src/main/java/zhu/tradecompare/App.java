@@ -28,10 +28,7 @@ public class App
 //    	String csvFilePath = args[0];
 //    	String logPath = args[1];
     	
-    	//Refactory, testbranch
-    	//insert another line
-	String csvFilePath = "C:\\Users\\dzhu\\Desktop\\java\\akoul\\swap.csv";
-
+    	String csvFilePath = "C:\\Users\\dzhu\\Desktop\\java\\akoul\\spot.csv";
     	String logPath = "C:\\Users\\dzhu\\Desktop\\java\\akoul\\green rfq logs on qa11 for hour 22.txt";
 
     	final String [] HEADERS = {
@@ -130,12 +127,13 @@ public class App
 			    	String valFromCsv = arr[col];
 			    	String valFromLog = allParamsInLog.get(k).get(col-1);			    	
 			    	sheet.addCell(new Label(col, row, valFromLog));
+		    		WritableCell c = sheet.getWritableCell(col, row);
+		    		WritableCellFormat newFormat = new WritableCellFormat();
+		    		newFormat.setBackground(Colour.GRAY_25);
 			    	if (compare(header[col-1], valFromCsv, valFromLog) == false) {
-			    		WritableCell c = sheet.getWritableCell(col, row);
-			    		WritableCellFormat newFormat = new WritableCellFormat();
 			    		newFormat.setBackground(Colour.RED);
-			    		c.setCellFormat(newFormat);
 			    	}
+		    		c.setCellFormat(newFormat);
 				}
 			    k++;
 			    if(k==allParamsInLog.size()) {
@@ -273,11 +271,93 @@ public class App
 	    		}
     		}
     		return retVal;
+    	}else if(header.contains("calc")) {
+    		//"Quote:calc(rate)"
+    		String side = getValueBySingleHeader(logLine, "buySell");
+    		String isTerm = getValueBySingleHeader(logLine, "isBaseSpecifiedCurrency");
+    		String tradeType = getValueBySingleHeader(logLine, "tradeType");
+    		String bidSpotRate = getValueBySingleHeader(logLine, "bidSpotRate");
+    		String bidPoints = getValueBySingleHeader(logLine, "bidPoints");
+    		String bidFarPoints = getValueBySingleHeader(logLine, "bidFarPoints");
+    		String offerSpotRate = getValueBySingleHeader(logLine, "offerSpotRate");
+    		String offerPoints = getValueBySingleHeader(logLine, "offerPoints");
+    		String offerFarPoints = getValueBySingleHeader(logLine, "offerFarPoints");
+    		
+    		if(header.contains("rate")) {
+    			return calculateRate(side, isTerm, tradeType, 
+    		    		bidSpotRate, bidPoints, bidFarPoints,
+    		    		offerSpotRate, offerPoints, offerFarPoints);
+    		}else if(header.contains("farRate")) {
+    			return calculateFarRate(side, isTerm, tradeType,
+    		    		bidSpotRate, bidFarPoints,
+    		    		offerSpotRate, offerFarPoints);
+    		}else {
+    			return "ERROR";
+    		}    		
     	}else {
     		return getValueBySingleHeader(logLine, header);
     	}
-    	return "EMPTY";
+    	return "ERROR";
     }
+    
+    public static String calculateFarRate(String side, String isTerm, String tradeType,
+    		String bidSpotRate, String bidFarPoints,
+    		String offerSpotRate, String offerFarPoints) {
+    	if(!"swap".equalsIgnoreCase(tradeType)) {
+    		return "NOT EXISTS";
+    	}
+    	String ret, ret_reverse;
+    	if("buy".equalsIgnoreCase(side)) {
+			ret = calculateRate(offerSpotRate, bidFarPoints, side);
+			ret_reverse = calculateRate(bidSpotRate, offerFarPoints, "sell");
+		}else {
+			ret = calculateRate(bidSpotRate, offerFarPoints, side);
+			ret_reverse = calculateRate(offerSpotRate, bidFarPoints, "buy");
+		}
+		if("false".equalsIgnoreCase(isTerm)) {
+			ret = ret_reverse;
+		}
+		return ret;
+    }
+    
+    public static String calculateRate(String side, String isTerm, String tradeType, 
+    		String bidSpotRate, String bidPoints, String bidFarPoints,
+    		String offerSpotRate, String offerPoints, String offerFarPoints) {
+    	String ret, ret_reverse;
+    	switch(tradeType){
+    		case "SPOT":
+    			if("buy".equalsIgnoreCase(side)) {
+    				ret = offerSpotRate;
+    				ret_reverse = bidSpotRate;
+    			}else {
+    				ret = bidSpotRate;
+    				ret_reverse = offerSpotRate;
+    			}
+    			break;
+    			
+    		case "FORWARD":
+    		case "SWAP":
+    			if("buy".equalsIgnoreCase(side)) {
+    				ret = calculateRate(offerSpotRate, offerPoints, side);
+    				ret_reverse = calculateRate(bidSpotRate, bidPoints, "sell");
+    			}else {
+    				ret = calculateRate(bidSpotRate, bidPoints, side);
+    				ret_reverse = calculateRate(offerSpotRate, offerPoints, "buy");
+    			}
+    			break;
+    			
+    		default:
+    			System.out.println("#ERROR: wrong trade type : "+tradeType);
+    			return "ERROR";
+    		
+    	}
+
+		if("false".equalsIgnoreCase(isTerm)) {
+			ret = ret_reverse;
+		}
+		return ret;
+    }
+    
     
     public static String calculateRate(String rate, String points, String side) {
     	try {
@@ -287,7 +367,7 @@ public class App
     		if ("BUY".equalsIgnoreCase(side)) {
     			return df.format(d1 + d2);
     		}else {
-    			return df.format(d1 - d2);
+    			return df.format(d1 + d2);
     		}
     	}catch (Exception e) {
     		e.printStackTrace();
